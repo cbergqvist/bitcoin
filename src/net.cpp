@@ -2464,7 +2464,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect, std
     }
 
     // Initiate network connections
-    auto start = GetTime<std::chrono::microseconds>();
+    const auto start = NodeClock::now();
 
     // Minimum time before next feeler connection (in microseconds).
     auto next_feeler = GetExponentialRand(start, FEELER_INTERVAL);
@@ -2474,7 +2474,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect, std
     bool add_fixed_seeds = gArgs.GetBoolArg("-fixedseeds", DEFAULT_FIXEDSEEDS);
     const bool use_seednodes{gArgs.IsArgSet("-seednode")};
 
-    auto seed_node_timer = NodeClock::now();
+    auto seed_node_timer = start;
     bool add_addr_fetch{addrman.Size() == 0 && !seed_nodes.empty()};
     constexpr std::chrono::seconds ADD_NEXT_SEEDNODE = 10s;
 
@@ -2516,7 +2516,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect, std
             // 60 seconds for any of those sources to populate addrman.
             bool add_fixed_seeds_now = false;
             // It is cheapest to check if enough time has passed first.
-            if (GetTime<std::chrono::seconds>() > start + std::chrono::minutes{1}) {
+            if (NodeClock::now() > start + 1min) {
                 add_fixed_seeds_now = true;
                 LogPrintf("Adding fixed seeds as 60 seconds have passed and addrman is empty for at least one reachable network\n");
             }
@@ -2605,7 +2605,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect, std
         }
 
         ConnectionType conn_type = ConnectionType::OUTBOUND_FULL_RELAY;
-        auto now = GetTime<std::chrono::microseconds>();
+        const auto now = NodeClock::now();
         bool anchor = false;
         bool fFeeler = false;
         std::optional<Network> preferred_net;

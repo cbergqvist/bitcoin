@@ -107,6 +107,11 @@ constexpr auto GetRandMillis = GetRandomDuration<std::chrono::milliseconds>;
  * is the average interval between events.
  * */
 std::chrono::microseconds GetExponentialRand(std::chrono::microseconds now, std::chrono::seconds average_interval);
+template<typename Clock, typename Dur>
+// NOT AT ALL SURE whether we should use the old GetExponentialRand() or make the old one use us.
+std::chrono::time_point<Clock, Dur> GetExponentialRand(const std::chrono::time_point<Clock, Dur>& now, std::chrono::seconds average_interval) {
+    return std::chrono::time_point<Clock, Dur>(GetExponentialRand(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()), average_interval));
+};
 
 uint256 GetRandHash() noexcept;
 

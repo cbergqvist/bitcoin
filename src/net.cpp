@@ -2434,7 +2434,7 @@ bool CConnman::MaybePickPreferredNetwork(std::optional<Network>& network)
     return false;
 }
 
-void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)
+void CConnman::ThreadOpenConnections(const std::vector<std::string> connect, std::vector<std::string> seed_nodes)
 {
     AssertLockNotHeld(m_unused_i2p_sessions_mutex);
     AssertLockNotHeld(m_reconnections_mutex);
@@ -2475,7 +2475,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)
     const bool use_seednodes{gArgs.IsArgSet("-seednode")};
 
     auto seed_node_timer = NodeClock::now();
-    bool add_addr_fetch{addrman.Size() == 0 && !m_seed_nodes.empty()};
+    bool add_addr_fetch{addrman.Size() == 0 && !seed_nodes.empty()};
     constexpr std::chrono::seconds ADD_NEXT_SEEDNODE = 10s;
 
     if (!add_fixed_seeds) {
@@ -2486,8 +2486,8 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)
     {
         if (add_addr_fetch) {
             add_addr_fetch = false;
-            auto seed = m_seed_nodes.back();
-            m_seed_nodes.pop_back();
+            auto seed = seed_nodes.back();
+            seed_nodes.pop_back();
             AddAddrFetch(seed);
 
             if (addrman.Size() == 0) {
@@ -2597,7 +2597,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)
             }
         }
 
-        if (!m_seed_nodes.empty() && nOutboundFullRelay < SEED_OUTBOUND_CONNECTION_THRESHOLD) {
+        if (!seed_nodes.empty() && nOutboundFullRelay < SEED_OUTBOUND_CONNECTION_THRESHOLD) {
             if (NodeClock::now() > seed_node_timer + ADD_NEXT_SEEDNODE) {
                 seed_node_timer = NodeClock::now();
                 add_addr_fetch = true;
@@ -3250,9 +3250,9 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
     }
 
     // Randomize the order in which we may query seednode to potentially prevent connecting to the same one every restart (and signal that we have restarted)
-    if (!connOptions.vSeedNodes.empty()) {
-        m_seed_nodes = connOptions.vSeedNodes;
-        Shuffle(m_seed_nodes.begin(), m_seed_nodes.end(), FastRandomContext{});
+    std::vector<std::string> seed_nodes = connOptions.vSeedNodes;
+    if (!seed_nodes.empty()) {
+        Shuffle(seed_nodes.begin(), seed_nodes.end(), FastRandomContext{});
     }
 
     if (m_use_addrman_outgoing) {
@@ -3313,7 +3313,7 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
     if (connOptions.m_use_addrman_outgoing || !connOptions.m_specified_outgoing.empty()) {
         threadOpenConnections = std::thread(
             &util::TraceThread, "opencon",
-            [this, connect = connOptions.m_specified_outgoing] { ThreadOpenConnections(connect); });
+            [this, connect = connOptions.m_specified_outgoing, seed_nodes = std::move(seed_nodes)] { ThreadOpenConnections(connect, seed_nodes); });
     }
 
     // Process messages

@@ -465,11 +465,14 @@ class TestNode():
         assert_equal(type(expected_msgs), list)
         assert_equal(type(unexpected_msgs), list)
 
-        time_end = time.time() + timeout * self.timeout_factor
+        start = time.time()
+        time_end = start + timeout * self.timeout_factor
+        hard_time_limit = start + 2 * timeout * self.timeout_factor
         prev_size = self.debug_log_size(encoding="utf-8")  # Must use same encoding that is used to read() below
 
         yield
 
+        attempt = 1
         while True:
             found = True
             with open(self.debug_log_path, encoding="utf-8", errors="replace") as dl:
@@ -483,10 +486,18 @@ class TestNode():
                 if re.search(re.escape(expected_msg), log, flags=re.MULTILINE) is None:
                     found = False
             if found:
-                return
-            if time.time() >= time_end:
+                now = time.time()
+                # If expected_msgs is empty, there's no use in waiting around for something.
+                # Forgive timeout on first attempt, the yield is allowed to take more time.
+                if len(expected_msgs) > 0 and now >= time_end and attempt > 1:
+                    self._raise_assertion_error(f'Expected messages "{expected_msgs}" found too late, took {now - start:.1f} seconds, {((now - start) / (time_end - start)) - 1:.1%} over the given limit. Log:\n\n{print_log}\n\n')
+                else:
+                    return
+            if time.time() >= hard_time_limit:
                 break
             time.sleep(0.05)
+            attempt += 1
+
         self._raise_assertion_error('Expected messages "{}" does not partially match log:\n\n{}\n\n'.format(str(expected_msgs), print_log))
 
     @contextlib.contextmanager

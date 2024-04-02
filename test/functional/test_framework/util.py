@@ -271,27 +271,38 @@ def wait_until_helper_internal(predicate, *, attempts=float('inf'), timeout=floa
         timeout = 60
     timeout = timeout * timeout_factor
     attempt = 0
-    time_end = time.time() + timeout
+    start = time.time()
+    time_end = start + timeout
+    hard_time_limit = start + timeout * 2
 
-    while attempt < attempts and time.time() < time_end:
+    completion_time = None
+    while attempt < attempts and time.time() < hard_time_limit:
         if lock:
             with lock:
                 if predicate():
-                    return
+                    completion_time = time.time()
+                    break
         else:
             if predicate():
-                return
+                completion_time = time.time()
+                break
         attempt += 1
         time.sleep(0.05)
 
+    # Did we complete in time?
+    if completion_time and completion_time < time_end:
+        return
+
     # Print the cause of the timeout
-    predicate_source = "''''\n" + inspect.getsource(predicate) + "'''"
+    predicate_source = "'''\n" + inspect.getsource(predicate) + "'''"
     logger.error("wait_until() failed. Predicate: {}".format(predicate_source))
     if attempt >= attempts:
         raise AssertionError("Predicate {} not true after {} attempts".format(predicate_source, attempts))
-    elif time.time() >= time_end:
-        raise AssertionError("Predicate {} not true after {} seconds".format(predicate_source, timeout))
-    raise RuntimeError('Unreachable')
+    else:
+        m = "Predicate {} not true after {} seconds".format(predicate_source, timeout)
+        if completion_time:
+            m += f". Took {completion_time - start:.1f} seconds to complete, {((completion_time - start) / (time_end - start)) - 1:.1%} over the given limit."
+        raise AssertionError(m)
 
 
 def sha256sum_file(filename):

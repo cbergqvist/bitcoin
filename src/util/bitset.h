@@ -145,7 +145,7 @@ public:
     {
         IntBitSet ret;
         Assume(count <= MAX_SIZE);
-        if (count) ret.m_val = I(~I{0}) >> (MAX_SIZE - count);
+        if (count) ret.m_val = ~I{0} >> (MAX_SIZE - count);
         return ret;
     }
     /** Set a bit to 1. */
@@ -512,8 +512,9 @@ public:
 // of bits. Use IntBitSet up to 32-bit, or up to 64-bit on 64-bit platforms; above that, use a
 // MultiIntBitSet of size_t.
 template<unsigned BITS>
-using BitSet = std::conditional_t<(BITS <= 32), bitset_detail::IntBitSet<uint32_t>,
+using BitSet = std::conditional_t<(BITS <= 16), bitset_detail::IntBitSet<uint16_t>,
+               std::conditional_t<(BITS <= 32), bitset_detail::IntBitSet<uint32_t>,
                std::conditional_t<(BITS <= std::numeric_limits<size_t>::digits), bitset_detail::IntBitSet<size_t>,
-               bitset_detail::MultiIntBitSet<size_t, (BITS + std::numeric_limits<size_t>::digits - 1) / std::numeric_limits<size_t>::digits>>>;
+               bitset_detail::MultiIntBitSet<size_t, (BITS + std::numeric_limits<size_t>::digits - 1) / std::numeric_limits<size_t>::digits>>>>;
 
 #endif // BITCOIN_UTIL_BITSET_H

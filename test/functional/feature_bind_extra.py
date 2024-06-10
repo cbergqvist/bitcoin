@@ -85,7 +85,7 @@ class BindExtraTest(BitcoinTestFramework):
             binds = set(filter(lambda e: len(e[0]) != ipv6_addr_len_bytes, binds))
             # Remove RPC ports. They are not relevant for this test.
             binds = set(filter(lambda e: e[1] != rpc_port(i), binds))
-            assert_equal(binds, set(self.expected[i][1]))
+            assert_equal(binds, set(expected_services))
 
 if __name__ == '__main__':
     BindExtraTest().main()

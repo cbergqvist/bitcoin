@@ -27,7 +27,7 @@ class BindExtraTest(BitcoinTestFramework):
         # Avoid any -bind= on the command line. Force the framework to avoid
         # adding -bind=127.0.0.1.
         self.bind_to_localhost_only = False
-        self.num_nodes = 3
+        self.num_nodes = 4
 
     def skip_test_if_missing_module(self):
         # Due to OS-specific network stats queries, we only run on Linux.
@@ -64,6 +64,15 @@ class BindExtraTest(BitcoinTestFramework):
         self.expected.append(
             [
                 [f"-bind=127.0.0.1:{port}"],
+                [(loopback_ipv4, port)]
+            ],
+        )
+        port += 1
+
+        # Node3, -bind=... and -listenonion.
+        self.expected.append(
+            [
+                [f"-bind=127.0.0.1:{port}", "-listenonion"],
                 [(loopback_ipv4, port)]
             ],
         )

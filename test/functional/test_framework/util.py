@@ -311,7 +311,7 @@ def sha256sum_file(filename):
 MAX_NODES = 12
 # Don't assign rpc or p2p ports lower than this
 PORT_MIN = int(os.getenv('TEST_RUNNER_PORT_MIN', default=11000))
-# The number of ports to "reserve" for p2p and rpc, each
+# The number of ports to "reserve" for p2p, rpc and tor, each
 PORT_RANGE = 5000
 
 
@@ -352,6 +352,10 @@ def p2p_port(n):
 
 def rpc_port(n):
     return PORT_MIN + PORT_RANGE + n + (MAX_NODES * PortSeed.n) % (PORT_RANGE - 1 - MAX_NODES)
+
+
+def tor_port(n):
+    return PORT_MIN + PORT_RANGE * 2 + n + (MAX_NODES * PortSeed.n) % (PORT_RANGE - 1 - MAX_NODES)
 
 
 def rpc_url(datadir, i, chain, rpchost):
@@ -396,6 +400,7 @@ def write_config(config_path, *, n, chain, extra_config="", disable_autoconnect=
             f.write("[{}]\n".format(chain_name_conf_section))
         f.write("port=" + str(p2p_port(n)) + "\n")
         f.write("rpcport=" + str(rpc_port(n)) + "\n")
+        f.write("torport=" + str(tor_port(n)) + "\n")
         # Disable server-side timeouts to avoid intermittent issues
         f.write("rpcservertimeout=99000\n")
         f.write("rpcdoccheck=1\n")
